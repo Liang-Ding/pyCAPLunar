@@ -11,7 +11,6 @@
 # (4) repeat the step (1) to (3) until the magnitude keeps the sample.
 # (5) localization.
 #
-# exp12
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
 # -------------------------------------------------------------------
