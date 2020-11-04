@@ -1,6 +1,6 @@
 The following step is to build the SGT database using the SPECFEM_Cartesian package.
 
-The current version of the SPECFEM_Cartesian package: v2.0.2
+The current version of the SPECFEM_Cartesian package used in this package: v2.0.2
 The later versions of the SPECFEM_Cartesian package might work well.
 
 (1) Change the following scripts in the SPECFEM_Cartesian package.  
