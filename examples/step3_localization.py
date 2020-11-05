@@ -22,7 +22,7 @@ def error_by_location(eventid, initial_source, strike, dip, rake, mag, n_point):
     # observation waveform.
     waveform_data_path = str(waveform_database_dir) + str('evt_') + str(eventid) + str('.pkl')
     '''
-    Please refer Qinya Liu's Github program to prepare the waveform.
+    Please refer to Qinya Liu's Github program to prepare the waveform.
     https://github.com/liuqinya/py_cap  
     '''
 
@@ -47,13 +47,22 @@ def error_by_location(eventid, initial_source, strike, dip, rake, mag, n_point):
         Step: 
         (1) find a set of grid points close to the initial source location in the external denser grid file. 
         (2) Calculate the waveform misfit at the grid points by using the given focal mechanism (strike, dip, rake, magnitude) 
-        '''
+    '''
+
+    # latitude, longitude, -> utm_x, utm_y
+    # depth: km -> m
+    zone_number = 11
+    easting, northing, zone_number, zone_letter = from_latlon(latitude=initial_source[0],
+                                                              longitude=initial_source[1],
+                                                              force_zone_number=zone_number)
+
+    source_utm = np.array([easting, northing, -1000.0 * initial_source[2]])
 
     #  find a set of grid points from the external pre-calculated denser grid file (eg: pre_calculated_grid.pkl).
     lat_arr, long_arr, z_arr, \
     utm_x_arr, utm_y_arr, utm_z_arr, \
     slice_index_arr, element_index_arr, \
-    xi_arr, eta_arr, gamma_arr = enquire_near_grid_points(x=initial_source[0], y=initial_source[1], z=initial_source[2], n_points=n_point)
+    xi_arr, eta_arr, gamma_arr = enquire_near_grid_points(x=source_utm[0], y=source_utm[1], z=source_utm[2], n_points=n_point)
 
     res_lat = []
     res_long = []
@@ -66,6 +75,11 @@ def error_by_location(eventid, initial_source, strike, dip, rake, mag, n_point):
     res_segment = []
 
     max_searching_distance = 0
+    for i in range(n_point):
+        dist = 111.0 * np.sqrt(np.square(lat_arr[i] - initial_source[0]) + np.square(long_arr[i] - initial_source[1]))
+        if dist > max_searching_distance:
+            max_searching_distance = dist
+
     # loop to calculate the waveform misfit in space.
     for i in range(n_point):
         lat = lat_arr[i]
@@ -93,9 +107,6 @@ def error_by_location(eventid, initial_source, strike, dip, rake, mag, n_point):
         # calculate the arrival time of P and S for cutting the SGT.
         for loc_sta in loc_list_sta:
             dist = 111.0 * np.sqrt(np.square(loc_sta[0] - loc_src[0]) + np.square(loc_sta[1] - loc_src[1]))
-            if dist > max_searching_distance:
-                max_searching_distance = dist
-
             n_tp_array.append(int((dist / vp) * sampling_rate) + n_sgt_offset)
             n_ts_array.append(int((dist / vs) * sampling_rate) + n_sgt_offset)
 
