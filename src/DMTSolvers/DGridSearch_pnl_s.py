@@ -171,10 +171,10 @@ def DFullgridSearch_pnl_s_MP(station_names, list_sgt_array, n_tp_array, n_ts_arr
 
             ### SGT
             # pnl
-            pnl_idx0_sgt = int(n_tp_array[i_sta])
+            pnl_idx0_sgt = int(n_tp_array[i_sta] - p_n_offset)
             pnl_idx1_sgt = int(pnl_idx0_sgt + p_waveform_length)
 
-            s_idx0_sgt = int(n_ts_array[i_sta])
+            s_idx0_sgt = int(n_ts_array[i_sta] - s_n_offset)
             s_idx1_sgt = int(s_idx0_sgt + s_waveform_length)
 
             ## filter and slice
