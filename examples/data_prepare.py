@@ -1,6 +1,5 @@
 # -------------------------------------------------------------------
-# Read the event catalog.
-# Return the source location and initial time of events.
+# Functions to prepare the data for the inversion.
 #
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
@@ -159,6 +158,35 @@ def enquire_near_grid_points(x, y, z, n_points, method='LATLONGZ'):
            slice_index_array[idx], element_index_array[idx], \
            xi_array[idx], eta_array[idx], gamma_array[idx]
 
+
+
+
+def enquire_grid_points_cubic(x_min, x_max, y_min, y_max, z_min, z_max, model='LATLONGZ'):
+    station_names, lat_array, long_array, z_array, \
+    utm_x_array, utm_y_array, utm_z_array, \
+    slice_index_array, element_index_array, \
+    xi_array, eta_array, gamma_array = grid_information()
+
+    idx = []
+    n_data = len(lat_array)
+    if str(model).upper() == str('LATLONGZ'):
+        for i in range(n_data):
+            if (lat_array[i] >= x_min) & (lat_array[i] <= x_max) & \
+                    (long_array[i] >= y_min) & (long_array[i] <= y_max) & \
+                    (z_array[i] >= z_min) & (z_array[i] <= z_max):
+                idx.append(i)
+
+    elif str(model).upper() == str('UTM'):
+        for i in range(n_data):
+            if (utm_x_array[i] >= x_min) & (utm_x_array[i] <= x_max) & \
+                    (utm_y_array[i] >= y_min) & (utm_y_array[i] <= y_max) & \
+                    (utm_z_array[i] >= z_min) & (utm_z_array[i] <= z_max):
+                idx.append(i)
+
+    return lat_array[idx], long_array[idx], z_array[idx], \
+           utm_x_array[idx], utm_y_array[idx], utm_z_array[idx], \
+           slice_index_array[idx], element_index_array[idx], \
+           xi_array[idx], eta_array[idx], gamma_array[idx]
 
 
 
