@@ -6,9 +6,6 @@
 # -------------------------------------------------------------------
 
 
-import sys
-sys.path.insert(1, '/scratch/l/liuqy/liangd/workspace/pymt_inversion/')
-
 from examples.common_parameters import *
 from examples.data_prepare import enquire_near_grid_points, load_sgt, load_data, load_loc_list_sta
 
