@@ -45,6 +45,8 @@ class DFMGridSearch():
         # Linux
         if str(self.project_dir)[-1] != str('/'):
             self.project_dir = str(self.project_dir) + str('/') + str("grid_search/")
+        else
+            self.project_dir = str(self.project_dir) + str("grid_search/")
 
         # save the searching result for each step.
         self.__job_identifier = job_identifier
