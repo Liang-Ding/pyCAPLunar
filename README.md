@@ -1,2 +1,2 @@
-# pySI_3DSGT
-A **py**thon package for earthquake **S**ource **I**nversion that simultaneously determines source location and focal mechanism based on **3D strain Green’s function (3DSGT)** database by spectral-element methods. 
+# pyCAPLunar
+pyCAPLunar is a python package that utilizes the stain Green's tensor database in 3D models to simultaneously determine the source location and moment tensor. It is based on a widely used waveform-based inversion method called the CAP (cut-and-paste) metod and the parameterization of general moment tensor by fundamental Lune. 
