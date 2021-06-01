@@ -139,7 +139,7 @@ class DSGTMgr(DPolyMesh):
         idx_processor, element_index, \
         xi, eta, gamma = self.find(x=source[0], y=source[1], z=source[2], n=1)
 
-        # the element index in the denser mesh (coming from the output_solver.txt) starts from 1.
+        # the element index in the .bin files starts from 1.
         # MUST subtract 1.
         idx_element = element_index - 1
 
