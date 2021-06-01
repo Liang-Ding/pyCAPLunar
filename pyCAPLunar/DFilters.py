@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------
-# Filters.
+# Filters to processing the SGT and data.
 #
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
@@ -12,7 +12,7 @@ import numpy as np
 
 def DFilter_sgt(sgt, freqmin, freqmax, df):
     '''
-    * Return the filtered SGTs
+    * Return filtered SGTs
 
     :param sgt:         The sgt array for one station.
                         Data shape: [n_sample, n_dim, n_para]

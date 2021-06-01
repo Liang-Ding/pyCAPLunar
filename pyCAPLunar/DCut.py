@@ -9,6 +9,7 @@
 
 import numpy as np
 
+# TODO: create a lite version of DCut.
 def DCut(data, data_length, index0, index1):
     '''
     Return the cut segment data[index0:index1]

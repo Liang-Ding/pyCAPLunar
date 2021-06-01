@@ -1,5 +1,6 @@
 # -------------------------------------------------------------------
-# Moment Tensor Inversion.
+# Calculating the waveform misfit
+# by using Cut-and-Paste and Tape's method.
 #
 # Ref:
 # [1] TAPE Walter, TAPE Carl., 2015
@@ -15,7 +16,7 @@
 # Email: myliang.ding@mail.utoronto.ca
 # -------------------------------------------------------------------
 
-from pyCAPLunar import g_TAPER_RATE_SRF, g_TAPER_SCALE
+from pyCAPLunar import g_TAPER_SCALE, g_TAPER_RATE_SRF
 from pyCAPLunar.DSyn import DSynRotateRTZ, DENZ2RTZ
 from pyCAPLunar.DPaste import DPaste
 
@@ -34,15 +35,14 @@ class DCAP():
                  n_tp_max_shift, n_ts_max_shift,
                  dt, n_phase=5, n_component=3,
                  w_pnl=1.0, w_srf=1.0,
-                 misfit_threshold=10,
-                 reject_rate=0.1,
-                 taper_scale=g_TAPER_SCALE,
-                 taper_rate_srf=g_TAPER_RATE_SRF,
+                 misfit_threshold=2.0,
+                 reject_rate=1.0,
+                 taper_scale=g_TAPER_SCALE, taper_rate_srf=g_TAPER_RATE_SRF,
                  cc_threshold=0.4,
                  amplitude_ratio_threshold=2.0):
 
         self.dt = dt
-        self.fn = 1.0/dt
+        self.fn = 1.0 / dt
         self.loc_src = np.zeros(3)
         self.loc_stations = loc_stations
         self.n_tp_sgt = np.asarray(n_tp_sgt).astype(int)
@@ -53,7 +53,7 @@ class DCAP():
         self.n_ts_max_shift = int(n_ts_max_shift)
 
         # constant variable
-        self.n_phase = n_phase          # PNL in R and Z, and S/Surface in R, T and Z components.
+        self.n_phase = n_phase  # PNL in R and Z, and S/Surface in R, T and Z components.
         self.n_component = n_component  # 3, R-T-Z or E-N-Z component.
         self.n_station = len(sgts_list)
         self.n_segment = self.n_station * self.n_phase
@@ -79,11 +79,10 @@ class DCAP():
         self.w_srf = w_srf
 
         # weight by distance, distance scale
-        # Zhu & Helmberger, 1996
+        # Using Zhu, Lupei (1996)'s method
         self.w_pnl_distance_scale = 1.13
         self.w_Love_distance_scale = 0.55
         self.w_Rayleigh_distance_scale = 0.74
-
 
         # initialize.
         self.update_azimuth(loc_src)
@@ -93,17 +92,8 @@ class DCAP():
 
         # create the coefficient for accelerating the inversion.
         self.TAPER_SCALE = taper_scale  # should be LESS than 0.
-        if taper_scale > 0:
-            self.TAPER_SCALE = -1.0 * taper_scale
-        # if taper_rate_srf = 1.0, then the s/surface will be discard.
-        if taper_rate_srf < 0.75:
-            self.taper_rate_srf = taper_rate_srf
-        else:
-            self.taper_rate_srf = 0.75
-
+        self.taper_rate_srf = taper_rate_srf  # if taper_rate_srf = 1.0, the s/surface will be discard.
         self.taper_coeff = np.exp(self.TAPER_SCALE * np.arange(np.max(self.n_syn_lens_srf)))
-
-
 
 
     def update_azimuth(self, loc_src):
@@ -152,7 +142,7 @@ class DCAP():
 
     def create_weights(self):
         '''
-        Create weighting matrix.
+        Create weight matrix according to the s-r distance.
         '''
 
         # initialize the weight matrix.
@@ -162,13 +152,12 @@ class DCAP():
         self.weights[:, :2] = self.w_pnl * self.weights[:, :2]
         self.weights[:, 2:] = self.w_srf * self.weights[:, 2:]
 
-        # weights by distance and phase type.
-        # Parameters utilized for events in California are similar to Zhu & Helmberger, 1996.
+        # weights by distance and phase type
+        # Parameters are similar to that in Zhu, Lupei (1996) & Liu, Qinya (2004)
         # [:, 0, 1] -> pnl, weight = $(r/r0)^{-1.13}$
         # [:, 2, 4] -> Rayleigh, weight = $(r/r0)^{-0.74}$
         # [:, 3] -> Love, weight= $(r/r0)^{-0.55}$
-
-        r0 =100.0  # in km.
+        r0 = 100.0  # in km.
         for i in range(self.n_station):
             # PNL
             self.weights[i, 0] = self.weights[i, 0] * np.power(self.distance_list[i]/r0,
@@ -188,10 +177,9 @@ class DCAP():
                                                                -1.0 * self.w_Love_distance_scale)
 
 
-
     def assess_misfit(self, misfit_matrix, cc_matrix):
         '''
-        Calculate the weighting misfit.
+        Calculate the misfit.
         '''
 
         # generate the weights matrix.
@@ -216,7 +204,8 @@ class DCAP():
 
     def cut_and_paste(self, mt):
         '''
-        Calculate the waveform misfit for the given moment tensor.
+        Caculate the waveform misfit for the given moment tensor
+        by Cut-and-Paste.
         '''
         misfit_matrix = np.ones((self.n_station, self.n_phase))
         shift_matrix = np.zeros((self.n_station, self.n_phase)).astype(int)
@@ -234,6 +223,7 @@ class DCAP():
             for j in range(self.n_component):
                 # PNL
                 pnl_syn_rtz[j][:self.n_tp_sgt[i]] = pnl_syn_rtz[j][:self.n_tp_sgt[i]] * np.flip(self.taper_coeff[:self.n_tp_sgt[i]])
+
                 # Surface
                 # find the peak of the S/Surface after the S arrival.
                 ts_peak = np.argmax(np.fabs(srf_syn_rtz[j, self.n_ts_sgt[i]:]))
@@ -284,7 +274,7 @@ class DCAP():
                     shift_matrix[i, k] = 0.0
                     cc_matrix[i, k] = 0.0
                 else:
-                    # paste: shift and misfit.
+                    # paste: shift and misfit calculation.
                     _n_shift, _misfit, _cc = DPaste(self.data_srf_rtz[i][j],
                                              self.n_ts_data[i],
                                              self.n_data_lens_srf[i],
@@ -303,3 +293,4 @@ class DCAP():
         '''Calculate the waveform misift. '''
         misfit_matrix, shift_matrix, cc_matrix = self.cut_and_paste(mt)
         return self.assess_misfit(misfit_matrix, cc_matrix)
+

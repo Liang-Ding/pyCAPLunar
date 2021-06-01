@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------
-# Prepare the data and SGT for the inversion.
+# Prepare the data and SGT to conduct the inversion.
 #
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
@@ -65,6 +65,7 @@ def prepare_data(data, df, p_freqmin, p_freqmax,
     data_list = []
 
     if b_taper:
+        # taper by clip
         _taper_p = DFilter_data(data, p_freqmin, p_freqmax, df)
         for i in range(len(_taper_p)):
             _taper_p[i][:n_tp] = _taper_p[i][:n_tp] * np.exp(g_TAPER_SCALE * np.arange(n_tp, 0, -1))
@@ -88,7 +89,6 @@ def prepare_data(data, df, p_freqmin, p_freqmax,
 
         data_list.append(_taper_p)
         data_list.append(_taper_s)
-
     else:
         # without taper.
         data_list.append(DFilter_data(data, p_freqmin, p_freqmax, df))
@@ -97,7 +97,38 @@ def prepare_data(data, df, p_freqmin, p_freqmax,
     return data_list
 
 
-def prepare_N_staiton(sgt_n_staitons, data_n_stations, df,
+def _prepare_N_staiton_sgt(sgt_n_stations, df,
+                           p_freqmin, p_freqmax,
+                           s_freqmin, s_freqmax,
+                           n_tp_sgt_stations, n_p_length, n_p_offset,
+                           n_ts_sgt_stations, n_s_length, n_s_offset):
+    sgt_list_n_stations = []
+    n_station = len(sgt_n_stations)
+    for i in range(n_station):
+        # sgt
+        sgt_list_n_stations.append(prepare_sgt(sgt_n_stations[i], df, p_freqmin, p_freqmax,
+                                               s_freqmin, s_freqmax,
+                                               n_tp_sgt_stations[i], n_p_length, n_p_offset,
+                                               n_ts_sgt_stations[i], n_s_length, n_s_offset))
+    return sgt_list_n_stations
+
+
+def _prepare_N_staiton_data(data_n_stations, df,
+                            p_freqmin, p_freqmax,
+                            s_freqmin, s_freqmax,
+                            n_p_length, n_s_length,
+                            n_tp_data, n_ts_data):
+    data_list_n_stations = []
+    n_station = len(data_n_stations)
+    for i in range(n_station):
+        # data
+        data_list_n_stations.append(prepare_data(data_n_stations[i], df, p_freqmin, p_freqmax,
+                                                 s_freqmin, s_freqmax, n_tp_data[i], n_ts_data[i],
+                                                 n_p_length, n_s_length))
+    return data_list_n_stations
+
+
+def prepare_N_staiton(sgt_n_stations, data_n_stations, df,
                       p_freqmin, p_freqmax,
                       s_freqmin, s_freqmax,
                       n_tp_sgt_stations, n_p_length, n_p_offset,
@@ -138,27 +169,26 @@ def prepare_N_staiton(sgt_n_staitons, data_n_stations, df,
     '''
 
     # check data
-    if len(sgt_n_staitons) != len(data_n_stations):
+    if len(sgt_n_stations) != len(data_n_stations):
         print("Incompatible number of station between the data and SGT. ")
-        return None, None
-
-    n_station = len(data_n_stations)
+        return False
 
     # initialize the data_container
-    sgt_list_n_stations = []
-    data_list_n_stations = []
-    for i in range(n_station):
-        # sgt
-        sgt_list_n_stations.append(prepare_sgt(sgt_n_staitons[i], df, p_freqmin, p_freqmax,
-                                              s_freqmin, s_freqmax,
-                                              n_tp_sgt_stations[i], n_p_length, n_p_offset,
-                                              n_ts_sgt_stations[i], n_s_length, n_s_offset))
-        # data
-        data_list_n_stations.append(prepare_data(data_n_stations[i], df, p_freqmin, p_freqmax,
-                                                s_freqmin, s_freqmax, n_tp_data[i], n_ts_data[i],
-                                                n_p_length, n_s_length))
+    sgt_list_n_stations = _prepare_N_staiton_sgt(sgt_n_stations, df,
+                      p_freqmin, p_freqmax,
+                      s_freqmin, s_freqmax,
+                      n_tp_sgt_stations, n_p_length, n_p_offset,
+                      n_ts_sgt_stations, n_s_length, n_s_offset)
+
+
+    data_list_n_stations = _prepare_N_staiton_data(data_n_stations, df,
+                      p_freqmin, p_freqmax,
+                      s_freqmin, s_freqmax,
+                      n_p_length, n_s_length,
+                      n_tp_data, n_ts_data)
 
     return sgt_list_n_stations, data_list_n_stations
+
 
 
 

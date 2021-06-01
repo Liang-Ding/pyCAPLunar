@@ -33,7 +33,7 @@ def DPaste(data, n_t_data, n_data_lens, syn, n_t_syn, n_syn_lens, n_max_shift):
 
     n_max_shift_2 = int(2.0 * n_max_shift)+1
 
-    # compute time shift
+    # compute tiem shift
     i_shift = 0
     _var_cc = 0
     max_cc = 0
