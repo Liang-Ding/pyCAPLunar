@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------
-# The Widgets that makes coding easier.
+# The Widgets that make coding easier.
 #
 # Author: Liang Ding
 # Email: myliang.ding@mail.utoronto.ca
