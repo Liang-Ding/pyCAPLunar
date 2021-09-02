@@ -3,5 +3,5 @@ pyCAPLunar is a python package that utilizes the stain Green's tensor database i
 
 ![pyCAPLunar Modules](https://github.com/Liang-Ding/pyCAPLunar/blob/master/Documentation/pyCAPLunar_modules.jpg)
 
-# SPECFEM3D_Cartesian to write out strain field
+# SPECFEM3D_Cartesian to write out the strain field
 ![instruction](https://github.com/Liang-Ding/pyCAPLunar/blob/master/SPECFEM_2_StrainField/SPECFEM3D_Cartesian_2_strain_field.png)
