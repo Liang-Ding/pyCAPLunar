@@ -1,3 +1,5 @@
+![instruction](https://github.com/Liang-Ding/pyCAPLunar/blob/master/SPECFEM_2_StrainField/SPECFEM3D_Cartesian_2_strain_field.png)
+
 The following steps are to build the SGT database using the SPECFEM_Cartesian package.
 
 The current version of the SPECFEM_Cartesian package used in this package: v2.0.2
