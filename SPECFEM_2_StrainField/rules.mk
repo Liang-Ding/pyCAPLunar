@@ -65,6 +65,7 @@ specfem3D_OBJECTS = \
 	$O/compute_forces_viscoelastic_calling_routine.spec.o \
 	$O/compute_forces_viscoelastic.spec.o \
 	$O/compute_element_att_memory.spec.o \
+	$O/compute_element_strain.spec.o \
 	$O/compute_forces_poro_fluid_part.spec.o \
 	$O/compute_forces_poroelastic_calling_routine.spec.o \
 	$O/compute_forces_poro_solid_part.spec.o \
@@ -91,6 +92,7 @@ specfem3D_OBJECTS = \
 	$O/gravity_perturbation.spec.o \
 	$O/initialize_simulation.spec.o \
 	$O/iterate_time.spec.o \
+	$O/iterate_time_undoatt.spec.o \
 	$O/locate_MPI_slice.spec.o \
 	$O/locate_point.spec.o \
 	$O/locate_receivers.spec.o \
@@ -111,9 +113,11 @@ specfem3D_OBJECTS = \
 	$O/prepare_wavefields.spec.o \
 	$O/print_stf_file.spec.o \
 	$O/read_external_stf.spec.o \
+	$O/read_forward_arrays.spec.o \
 	$O/read_mesh_databases.spec.o \
 	$O/read_stations.spec.o \
 	$O/save_adjoint_kernels.spec.o \
+	$O/save_forward_arrays.spec.o \
 	$O/setup_GLL_points.spec.o \
 	$O/setup_movie_meshes.spec.o \
 	$O/setup_sources_receivers.spec.o \
@@ -126,7 +130,7 @@ specfem3D_OBJECTS = \
 	$O/write_output_ASCII_or_binary.spec.o \
 	$O/write_output_SU.spec.o \
 	$O/write_seismograms.spec.o \
-        $O/dl_runtime_saver.spec.o \
+	$O/dl_runtime_saver.spec.o \
 	$(EMPTY_MACRO)
 
 specfem3D_SHARED_OBJECTS = \
@@ -178,6 +182,7 @@ specfem3D_MODULES = \
 	$(FC_MODDIR)/specfem_par_poroelastic.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par_movie.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par_coupling.$(FC_MODEXT) \
+	$(FC_MODDIR)/specfem_par_noise.$(FC_MODEXT) \
 	$(FC_MODDIR)/user_noise_distribution.$(FC_MODEXT) \
 	$(EMPTY_MACRO)
 
@@ -188,47 +193,10 @@ specfem3D_MODULES = \
 specfem3D_SHARED_OBJECTS += $(COND_MPI_OBJECTS)
 
 ###
-### CUDA
+### GPU
 ###
-cuda_specfem3D_OBJECTS = \
-	$O/assemble_MPI_scalar_cuda.cuda.o \
-	$O/assemble_MPI_vector_cuda.cuda.o \
-	$O/check_fields_cuda.cuda.o \
-	$O/compute_add_sources_acoustic_cuda.cuda.o \
-	$O/compute_add_sources_viscoelastic_cuda.cuda.o \
-	$O/compute_coupling_cuda.cuda.o \
-	$O/compute_forces_acoustic_cuda.cuda.o \
-	$O/compute_forces_viscoelastic_cuda.cuda.o \
-	$O/compute_kernels_cuda.cuda.o \
-	$O/compute_stacey_acoustic_cuda.cuda.o \
-	$O/compute_stacey_viscoelastic_cuda.cuda.o \
-	$O/helper_functions.cuda.o \
-	$O/initialize_cuda.cuda.o \
-	$O/noise_tomography_cuda.cuda.o \
-	$O/prepare_mesh_constants_cuda.cuda.o \
-	$O/save_and_compare_cpu_vs_gpu.cudacc.o \
-	$O/transfer_fields_cuda.cuda.o \
-	$O/update_displacement_cuda.cuda.o \
-	$O/write_seismograms_cuda.cuda.o \
-	$O/fault_solver_dynamics.cuda.o \
-	$(EMPTY_MACRO)
 
-cuda_specfem3D_STUBS = \
-	$O/specfem3D_gpu_cuda_method_stubs.cudacc.o \
-	$(EMPTY_MACRO)
-
-cuda_specfem3D_DEVICE_OBJ = \
-	$O/cuda_device_obj.o \
-	$(EMPTY_MACRO)
-
-ifeq ($(CUDA),yes)
-specfem3D_OBJECTS += $(cuda_specfem3D_OBJECTS)
-ifeq ($(CUDA_PLUS),yes)
-specfem3D_OBJECTS += $(cuda_specfem3D_DEVICE_OBJ)
-endif
-else
-specfem3D_OBJECTS += $(cuda_specfem3D_STUBS)
-endif
+specfem3D_SHARED_OBJECTS += $(gpu_OBJECTS)
 
 ###
 ### ADIOS
@@ -271,18 +239,12 @@ asdf_specfem3D_OBJECTS = \
         $O/read_adjoint_sources_ASDF.spec.o \
         $(EMPTY_MACRO)
 
-asdf_specfem3D_SHARED_OBJECTS = \
-        $O/asdf_manager.shared_asdf.o \
-        $(EMPTY_MACRO)
-
-asdf_specfem3D_SHARED_STUBS = \
-        $O/asdf_method_stubs.cc.o \
-        $O/asdf_manager_stubs.shared_asdf.o \
-        $(EMPTY_MACRO)
+asdf_specfem3D_SHARED_OBJECTS = $(asdf_shared_OBJECTS)
+asdf_specfem3D_SHARED_STUBS = $(asdf_shared_STUBS)
 
 # conditional asdf linking
 ifeq ($(ASDF),yes)
-SPECFEM_LINK_FLAGS += $(ASDF_LIBS) -lhdf5hl_fortran -lhdf5_hl -lhdf5 -lstdc++
+SPECFEM_LINK_FLAGS += $(ASDF_LIBS)
 specfem3D_OBJECTS += $(asdf_specfem3D_OBJECTS)
 specfem3D_SHARED_OBJECTS += $(asdf_specfem3D_SHARED_OBJECTS)
 else
@@ -311,21 +273,14 @@ endif
 #### rules for executables
 ####
 
-ifeq ($(CUDA),yes)
-## cuda version
-ifeq ($(CUDA_PLUS),yes)
-## cuda 5x & 6x version
-INFO_CUDA_SPECFEM="building xspecfem3D with CUDA support"
-else
-## cuda 4 version
-INFO_CUDA_SPECFEM="building xspecfem3D with CUDA 4 support"
-endif
+ifeq ($(HAS_GPU),yes)
+INFO_GPU_SPECFEM="building xspecfem3D $(BUILD_VERSION_TXT)"
 
 ${E}/xspecfem3D: $(specfem3D_OBJECTS) $(specfem3D_SHARED_OBJECTS)
 	@echo ""
-	@echo $(INFO_CUDA_SPECFEM)
+	@echo $(INFO_GPU_SPECFEM)
 	@echo ""
-	${FCLINK} -o ${E}/xspecfem3D $(specfem3D_OBJECTS) $(specfem3D_SHARED_OBJECTS) $(MPILIBS) $(CUDA_LINK) $(VTKLIBS) $(SPECFEM_LINK_FLAGS)
+	${FCLINK} -o ${E}/xspecfem3D $(specfem3D_OBJECTS) $(specfem3D_SHARED_OBJECTS) $(MPILIBS) $(GPU_LINK) $(VTKLIBS) $(SPECFEM_LINK_FLAGS)
 	@echo ""
 
 else
@@ -365,11 +320,15 @@ $O/iterate_time.spec.o: $O/gravity_perturbation.spec.o
 $O/prepare_gravity.spec.o: $O/gravity_perturbation.spec.o
 
 ## adios
+$O/specfem3D_adios_stubs.spec_noadios.o: $O/adios_manager_stubs.shared_noadios.o
+
 $O/initialize_simulation.spec.o: $(adios_specfem3D_PREOBJECTS)
 $O/save_kernels_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
 $O/save_forward_arrays_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
+$O/read_mesh_databases_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
+$O/read_forward_arrays_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
 $O/finalize_simulation.spec.o: $O/gravity_perturbation.spec.o $(adios_specfem3D_PREOBJECTS)
-$O/specfem3D_adios_stubs.spec_noadios.o: $O/adios_manager_stubs.shared_noadios.o
+
 $O/adios_helpers.shared_adios.o: \
 	$O/adios_helpers_definitions.shared_adios_module.o \
 	$O/adios_helpers_writers.shared_adios_module.o
@@ -398,13 +357,6 @@ $O/%.spec.o: $S/%.f90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 
 $O/%.spec.o: $S/%.F90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
-
-###
-### CUDA 5 only
-###
-
-$(cuda_specfem3D_DEVICE_OBJ): $(cuda_OBJECTS)
-	${NVCCLINK} -o $(cuda_specfem3D_DEVICE_OBJ) $(cuda_OBJECTS)
 
 ###
 ### ADIOS compilation
