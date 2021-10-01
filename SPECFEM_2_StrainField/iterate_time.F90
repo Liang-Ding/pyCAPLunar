@@ -254,14 +254,14 @@
 
     ! Storing the strain field in the model.
     ! Added by Liang Ding on Sep. 29th, 2021
-    ! processor(range) selection
-    if (myrank == 1 .or. myrank == 2) then 
+    ! processor(range) selection - [if (myrank == ... endif] - comment to store the whole 3D model. 
+    ! if (myrank == 1 .or. myrank == 2) then 
         if (SIMULATION_TYPE == 1 .and. SAVE_FORWARD) then 
 
-            ! Time interval selection (dt=value * DT in the Par_file)
+            ! Time interval selection (dt=value * DT in the Par_file, where the value=10 in the following line)
             if (mod(it, 10) == 1) call dl_runtime_save_strain(it)
         endif
-    endif
+    ! endif
 
     ! restores last time snapshot saved for backward/reconstruction of wavefields
     ! note: this must be read in after the Newmark time scheme
