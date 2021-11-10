@@ -11,12 +11,29 @@
 
 from DSEM_Utils.strainfield_reader import read_strain_bins_by_elements
 import numpy as np
+import h5py
 import zlib
-import pickle
 import os.path
 import sys
 
 NAME_SGT = 'strain_field'
+
+
+SGT_KEYS = [
+    'index',
+    'start',
+    'length'
+    'offset',
+    'scale'
+]
+
+SGT_ATTRS = [
+    'ngll',
+    'nstep',
+    'nforce',
+    'nparas',
+]
+
 
 def DCheck_valid_step(dir_array, str_processor, step0, step1, dstep):
     '''
@@ -53,8 +70,6 @@ def DCheck_valid_step(dir_array, str_processor, step0, step1, dstep):
     else:
         return valid_step_array
 
-
-
 def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, index_GLL_arr,
                             step0, step1, dstep, save_dir, n_dim=3, n_paras=6, encoding_level=8):
     '''
@@ -62,21 +77,21 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
         * according to the selected GLL points indicated by the 'names_GLL_arr' and 'index_GLL_arr'
 
         * The process to build the SGT database includes
-            (1) Extract the selected GLL pints index in global from *.ibool file.
-            (2) Generate the indexes array to the selected GLL points. a set of [i_sepc, i_gll].
-            (3) Extract the SGT from *_strain_field.bin files export by SEM forwarding process
+            (1) Read the global index of selected GLL pints in slice from *.ibool file.
+            (2) Extract the indexes array (a set of [i_spec, i_gll]) to the selected GLL points.
+            (3) Read the SGT from *_strain_field.bin files exported by SPECFEM3D
                 according to [i_spec, i_gll] array in step (2).
-            (4) Encoding the SGT in GLL point. Convert the float32 to int16.
-            (5) Compress the Encoding results using Huffman coding.
-            (6) Store the SGT and info to files.
+            (4) Encoding. Convert the amplitude in SGT from float32 to int16.
+            (5) Compression.
+            (6) Store the SGT and header files.
 
     :param dir_array:       The directories containing the generated strain field.
                             MUST contain the 3 directories corresponding with the three unit forces.
 
     :param str_processor:   The name string of the Processor, eg:'proc0000*'
-    :param NSPEC:           The number of Spectral elements in the processor. (int), eg: 2232
-    :param names_GLL_arr:   The unique global index (name) of selected GLL points. [0, 1, 2, ..., etc. ]
-    :param index_GLL_arr:   The indexes array that indicate where the GLL points are. [[i_spec, i_gll], ..., etc. ]
+    :param NSPEC:           The number of Spectral elements in each processor. (int), eg: 2232
+    :param names_GLL_arr:   The unique global index (name) of selected GLL points in each slice. [0, 1, 2, ..., etc. ]
+    :param index_GLL_arr:   The indexes array that indicate where the GLL points is. [[i_spec, i_gll], ..., etc. ]
     :param step0:           The starting step, not in second.       (int), eg: 0
     :param step1:           The ending step, not in second.         (int), eg: 6000
     :param dstep:           The interval of the time step, not in second.   (int), eg: 10
@@ -95,11 +110,13 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
     if valid_step_array is None:
         return False
 
-    # count the total number of the Global GLL point.
+    # count the total number of the Global GLL point in each mesh slice.
     n_gll = len(names_GLL_arr)
 
     # count valid steps.
     n_step = len(valid_step_array)
+
+    encoding_level = int(encoding_level)
 
     # allocate a buffer
     try:
@@ -130,15 +147,16 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
         # use buffer on RAM to store data temporarily.
         buffer[:, idx, :, :] = dat_arr_onestep
 
-    # Save the data and information to files.
+    # Save the data and header.
     sgt_data_file = str(save_dir) + str(str_processor) + str("_sgt_data.bin")
-    sgt_info_file = str(save_dir) + str(str_processor) + str("_sgt_info.pkl")
+    header_file = str(save_dir) + str(str_processor) + str("_header.hdf5")
 
     data_offset_array = []
-    data_factor_array = []
-    data_index_array = []
+    data_scale_array = []
+    data_start_array = []
+    data_length_array = []
 
-    '''Compress and write out to the bin file (data) and pickle file (information). '''
+    '''Compress and store the data (*.bin) and header (*.hdf5). '''
     with open(sgt_data_file, 'wb') as fw:
         for i in range(n_gll):
             data = np.empty(0)
@@ -158,7 +176,7 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
             # Amplitude normalization => [0, 1]
             normal_factor = np.max(data)
             data = data / normal_factor
-            data_factor_array.append(normal_factor)
+            data_scale_array.append(normal_factor)
 
             # encoding - convert the flota32 to uint16.
             if 8 == encoding_level:
@@ -176,26 +194,35 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
             # the size of compressed SGT.
             size_compress_data = sys.getsizeof(data_compress)
 
-            # save the beginning and length of compressed data.
-            # [beginning in size, length in size]
-            data_index_array.append(np.array([fw.tell(), size_compress_data]))
+            # the start position in byte.
+            data_start_array.append(fw.tell())
+            # the data length in byte.
+            data_length_array.append(size_compress_data)
+
+            # store the compressed SGT at each selected GLL point.
             fw.write(data_compress)
 
     # Save the information for reading the SGT database later.
-    data_index_array = np.asarray(data_index_array).astype(int)
-    data_offset_array = np.asarray(data_offset_array).astype(np.float)
-    data_factor_array = np.asarray(data_factor_array).astype(np.float)
-    with open(sgt_info_file, 'wb') as fw_info:
-        pickle.dump(n_gll, fw_info)
-        pickle.dump(n_step, fw_info)
-        pickle.dump(n_dim, fw_info)
-        pickle.dump(n_paras, fw_info)
-        pickle.dump(names_GLL_arr, fw_info)
-        pickle.dump(data_index_array, fw_info)
-        pickle.dump(data_offset_array, fw_info)
-        pickle.dump(data_factor_array, fw_info)
-        
+    index_GLL_in_slice = names_GLL_arr
+    data_start_array = np.asarray(data_start_array).astype(int)
+    data_length_array = np.asarray(data_length_array).astype(int)
+    data_offset_array = np.asarray(data_offset_array).astype(float)
+    data_scale_array = np.asarray(data_scale_array).astype(float)
+
+    # save the header into HDF5 file.
+    with h5py.File(header_file, 'w') as f:
+        f.create_dataset(name=SGT_KEYS[0], shape=np.shape(index_GLL_in_slice), data=index_GLL_in_slice, dtype=int)
+        f.create_dataset(name=SGT_KEYS[1], shape=np.shape(data_start_array), data=data_start_array, dtype=int)
+        f.create_dataset(name=SGT_KEYS[2], shape=np.shape(data_length_array), data=data_length_array, dtype=int)
+        f.create_dataset(name=SGT_KEYS[3], shape=np.shape(data_offset_array), data=data_offset_array, dtype=float)
+        f.create_dataset(name=SGT_KEYS[4], shape=np.shape(data_scale_array), data=data_scale_array, dtype=float)
+
+        f.attrs[SGT_ATTRS[0]] = n_gll
+        f.attrs[SGT_ATTRS[1]] = n_step
+        f.attrs[SGT_ATTRS[2]] = n_dim
+        f.attrs[SGT_ATTRS[3]] = n_paras
+
     return True
-    
+
    
     

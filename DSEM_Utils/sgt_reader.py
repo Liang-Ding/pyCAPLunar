@@ -7,8 +7,24 @@
 
 
 import numpy as np
-import pickle
+import h5py
 import zlib
+
+
+SGT_KEYS = [
+    'index',
+    'start',
+    'length'
+    'offset',
+    'scale'
+]
+
+SGT_ATTRS = [
+    'ngll',
+    'nstep',
+    'nforce',
+    'nparas',
+]
 
 
 def DEnquire_SGT(data_path, info_path, GLL_points, encoding_level):
@@ -16,7 +32,7 @@ def DEnquire_SGT(data_path, info_path, GLL_points, encoding_level):
     * Enquire the SGT from the database (*.bin files).
 
     :param data_path:       The path to the data file (.bin).
-    :param info_path:       The path to the info file (.pkl).
+    :param info_path:       The path to the header file (.hdf5).
     :param GLL_points:      The global index of the GLL points need to be enquired.
     :param encoding_level:  The encoding level.
     :return:
@@ -24,29 +40,28 @@ def DEnquire_SGT(data_path, info_path, GLL_points, encoding_level):
     '''
 
     # load the information of SGT database.
-    with open(info_path, 'rb') as fr_info:
-        n_gll = pickle.load(fr_info)
-        n_step = pickle.load(fr_info)
-        n_dim = pickle.load(fr_info)
-        n_paras = pickle.load(fr_info)
-        names_GLL_arr = pickle.load(fr_info)
-        data_index_array = pickle.load(fr_info)
-        data_offset_array = pickle.load(fr_info)
-        data_factor_array = pickle.load(fr_info)
+    with h5py.File(info_path, 'r') as f:
+        names_GLL_arr       = f[SGT_KEYS[0]][:]
+        data_start_array    = f[SGT_KEYS[1]][:]
+        data_length_array   = f[SGT_KEYS[2]][:]
+        data_offset_array   = f[SGT_KEYS[3]][:]
+        data_scale_array    = f[SGT_KEYS[4]][:]
 
-    names_GLL_arr = np.asarray(names_GLL_arr)
-    data_index_array = np.asarray(data_index_array)
-    data_offset_array = np.asarray(data_offset_array)
-    data_factor_array = np.asarray(data_factor_array)
+        n_gll   = f.attrs[SGT_ATTRS[0]]
+        n_step  = f.attrs[SGT_ATTRS[1]]
+        n_dim   = f.attrs[SGT_ATTRS[2]]
+        n_paras = f.attrs[SGT_ATTRS[3]]
+
 
     sgt_arr_list = []
     with open(data_path, "rb") as fr:
         for gll in GLL_points:
-            idx_gll = np.where(names_GLL_arr == gll)[0][0]
+            idx_gll = (np.where(names_GLL_arr == gll))[0][0]
+
             offset_min = data_offset_array[idx_gll]
-            normal_factor = data_factor_array[idx_gll]
-            sgt_begin_bytes = data_index_array[idx_gll][0]
-            sgt_length_bytes = data_index_array[idx_gll][1]
+            normal_factor = data_scale_array[idx_gll]
+            sgt_begin_bytes = data_start_array[idx_gll]
+            sgt_length_bytes = data_length_array[idx_gll]
 
             # extract the compressed data.
             fr.seek(sgt_begin_bytes)
@@ -75,4 +90,3 @@ def DEnquire_SGT(data_path, info_path, GLL_points, encoding_level):
             sgt_arr_list.append(unzip_sgt)
 
     return sgt_arr_list
-
