@@ -32,6 +32,7 @@ SGT_ATTRS = [
     'nstep',
     'nforce',
     'nparas',
+    'dt',
 ]
 
 
@@ -71,7 +72,7 @@ def DCheck_valid_step(dir_array, str_processor, step0, step1, dstep):
         return valid_step_array
 
 def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, index_GLL_arr,
-                            step0, step1, dstep, save_dir, n_dim=3, n_paras=6, encoding_level=8):
+                            step0, step1, dstep, save_dir, dt, n_dim=3, n_paras=6, encoding_level=8):
     '''
         * Merge the SGT in global with encoding, and compression,
         * according to the selected GLL points indicated by the 'names_GLL_arr' and 'index_GLL_arr'
@@ -96,6 +97,7 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
     :param step1:           The ending step, not in second.         (int), eg: 6000
     :param dstep:           The interval of the time step, not in second.   (int), eg: 10
     :param save_dir:        The output directory for saving the bin and info file.
+    :param save_dir:        The time interval of the SGT data.
     :param n_dim:           The number of Unit forces, which is restricted to 3.
     :param n_paras:         The number of the components in each SGT, which is restricted to 6.
     :param encoding_level:  The encoding level. To convert the float to INT.
@@ -221,6 +223,8 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
         f.attrs[SGT_ATTRS[1]] = n_step
         f.attrs[SGT_ATTRS[2]] = n_dim
         f.attrs[SGT_ATTRS[3]] = n_paras
+        f.attrs[SGT_ATTRS[4]] = dt
+        f.attrs['version']='v1.0'
 
     return True
 
