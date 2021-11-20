@@ -33,6 +33,7 @@ SGT_ATTRS = [
     'nforce',
     'nparas',
     'dt',
+    'nspec',
 ]
 
 
@@ -224,6 +225,7 @@ def DMerge_and_Compress_SGT(dir_array, str_processor, NSPEC, names_GLL_arr, inde
         f.attrs[SGT_ATTRS[2]] = n_dim
         f.attrs[SGT_ATTRS[3]] = n_paras
         f.attrs[SGT_ATTRS[4]] = dt
+        f.attrs[SGT_ATTRS[5]] = NSPEC
         f.attrs['version']='v1.0'
 
     return True

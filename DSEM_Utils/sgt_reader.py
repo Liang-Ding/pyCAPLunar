@@ -24,6 +24,8 @@ SGT_ATTRS = [
     'nstep',
     'nforce',
     'nparas',
+    'dt'
+    'nspec'
 ]
 
 
@@ -51,6 +53,8 @@ def DEnquire_SGT(data_path, info_path, GLL_points, encoding_level):
         n_step  = f.attrs[SGT_ATTRS[1]]
         n_dim   = f.attrs[SGT_ATTRS[2]]
         n_paras = f.attrs[SGT_ATTRS[3]]
+        dt      = f.attrs[SGT_ATTRS[4]]
+        NSPEC   = f.attrs[SGT_ATTRS[5]]
 
 
     sgt_arr_list = []
