@@ -22,7 +22,7 @@ NAME_SGT = 'strain_field'
 SGT_KEYS = [
     'index',
     'start',
-    'length'
+    'length',
     'offset',
     'scale'
 ]
